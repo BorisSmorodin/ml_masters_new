@@ -5,7 +5,7 @@ from typing import Dict, Any
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 
-from core.states import TICKER, AMOUNT
+from core.states import TICKER, AMOUNT, FORECAST_DAYS
 from data_manage.loader import load_stock_data
 from data_manage.ticker_list import ticker_manager
 from models.model_selector import select_best_model, train_and_evaluate_models
@@ -126,8 +126,9 @@ async def process_ticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return TICKER
 
 
+# В функцию process_amount добавляем переход к запросу периода
 async def process_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Обработка суммы инвестиции, запуск анализа."""
+    """Обработка суммы инвестиции, запрос периода прогноза."""
     user = update.message.from_user
 
     try:
@@ -143,19 +144,46 @@ async def process_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Сохраняем сумму в сессии
     user_sessions[user.id]['amount'] = amount
 
+    await update.message.reply_text(
+        f"Сумма инвестиции: ${amount:,.2f}\n\n"
+        f"Теперь укажите период прогнозирования в днях (например, 30):"
+    )
+
+    return FORECAST_DAYS
+
+
+# Добавляем новую функцию для обработки периода
+async def process_forecast_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработка периода прогнозирования, запуск анализа."""
+    user = update.message.from_user
+
+    try:
+        forecast_days = int(update.message.text.strip())
+        if forecast_days < 1 or forecast_days > 365:
+            raise ValueError("Период должен быть от 1 до 365 дней")
+    except ValueError:
+        await update.message.reply_text(
+            "Пожалуйста, введите корректное количество дней (от 1 до 365)."
+        )
+        return FORECAST_DAYS
+
+    # Сохраняем период в сессии
+    user_sessions[user.id]['forecast_days'] = forecast_days
+
     # Отправляем сообщение о начале анализа
     processing_msg = await update.message.reply_text(
-        "🔍 Начинаю анализ...\n"
-        "1. Обучаю модели...\n"
-        "2. Сравниваю метрики...\n"
-        "3. Выбираю лучшую модель...\n"
-        "Это может занять несколько минут."
+        f"🔍 Начинаю анализ...\n"
+        f"• Тикер: {user_sessions[user.id]['ticker']}\n"
+        f"• Сумма: ${user_sessions[user.id]['amount']:,.2f}\n"
+        f"• Период прогноза: {forecast_days} дней\n\n"
+        f"Это может занять несколько минут..."
     )
 
     try:
         # Получаем данные из сессии
         ticker = user_sessions[user.id]['ticker']
         data = user_sessions[user.id]['data']
+        amount = user_sessions[user.id]['amount']
 
         # Шаг 1: Обучаем и сравниваем модели
         await processing_msg.edit_text("🔍 Начинаю анализ...\n1. 📊 Обучаю модели...")
@@ -165,9 +193,9 @@ async def process_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await processing_msg.edit_text("🔍 Начинаю анализ...\n2. ⚖️ Сравниваю метрики...")
         best_model_name, best_model, metrics = select_best_model(models_results)
 
-        # Шаг 3: Делаем прогноз
-        await processing_msg.edit_text("🔍 Начинаю анализ...\n3. 🔮 Строю прогноз...")
-        forecast = make_forecast(best_model, data, model_name=best_model_name)
+        # Шаг 3: Делаем прогноз на указанный период
+        await processing_msg.edit_text(f"🔍 Начинаю анализ...\n3. 🔮 Строю прогноз на {forecast_days} дней...")
+        forecast = make_forecast(best_model, data, model_name=best_model_name, steps=forecast_days)
 
         # Шаг 4: Генерируем торговые сигналы
         await processing_msg.edit_text("🔍 Начинаю анализ...\n4. 📈 Анализирую сигналы...")
@@ -178,7 +206,7 @@ async def process_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Шаг 6: Создаем визуализацию
         await processing_msg.edit_text("🔍 Начинаю анализ...\n5. 🎨 Создаю график...")
-        plot_path = create_forecast_plot(data, forecast, signals, ticker)
+        plot_path = create_forecast_plot(data, forecast, signals, ticker, forecast_days)
 
         # Шаг 7: Формируем финальный отчет
         last_price = data['Close'].iloc[-1]
@@ -191,9 +219,9 @@ async def process_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         report = f"""
 📊 **ОТЧЕТ ПО АКЦИЯМ {ticker}**
 
-📈 **Прогноз на 30 дней:**
+📈 **Прогноз на {forecast_days} дней:**
 • Текущая цена: {format_currency(last_price)}
-• Прогноз через 30 дней: {format_currency(forecast_price)}
+• Прогноз через {forecast_days} дней: {format_currency(forecast_price)}
 • Изменение: {format_percentage(price_change)}
 
 🏆 **Лучшая модель:** {best_model_name}
@@ -224,6 +252,7 @@ async def process_amount(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             timestamp=datetime.now(),
             ticker=ticker,
             amount=amount,
+            forecast_days=forecast_days,
             best_model=best_model_name,
             metric_value=metrics['rmse'],
             profit=profit['profit_pct']

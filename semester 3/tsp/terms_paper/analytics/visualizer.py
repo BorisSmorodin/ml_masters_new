@@ -13,7 +13,8 @@ def create_forecast_plot(
         historical_data: pd.DataFrame,
         forecast: pd.Series,
         signals: list,
-        ticker: str
+        ticker: str,
+        forecast_days: int = 30
 ) -> Path:
     """
     Создает график с историческими данными и прогнозом.
@@ -23,6 +24,7 @@ def create_forecast_plot(
         forecast: Прогноз
         signals: Список торговых сигналов
         ticker: Тикер акции
+        forecast_days: Количество дней прогнозирования
 
     Returns:
         Путь к сохраненному изображению
@@ -71,7 +73,7 @@ def create_forecast_plot(
         )
 
     # Настройки графика
-    plt.title(f'Прогноз цен акций {ticker}', fontsize=16, fontweight='bold')
+    plt.title(f'Прогноз цен акций {ticker} на {forecast_days} дней', fontsize=16, fontweight='bold')
     plt.xlabel('Дата', fontsize=12)
     plt.ylabel('Цена (USD)', fontsize=12)
     plt.legend(loc='best')

@@ -26,16 +26,19 @@ def main() -> None:
 
     # Создаем ConversationHandler для диалога
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[CommandHandler('start', bot_handlers.start)],
         states={
-            TICKER: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, process_ticker)
+            bot_handlers.TICKER: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, bot_handlers.process_ticker)
             ],
-            AMOUNT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, process_amount)
+            bot_handlers.AMOUNT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, bot_handlers.process_amount)
+            ],
+            bot_handlers.FORECAST_DAYS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, bot_handlers.process_forecast_days)
             ],
         },
-        fallbacks=[CommandHandler('cancel', cancel)],
+        fallbacks=[CommandHandler('cancel', bot_handlers.cancel)],
     )
 
     # Регистрируем обработчики
