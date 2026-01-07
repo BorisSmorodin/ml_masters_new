@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes, ConversationHandler
 from core.states import TICKER, AMOUNT, FORECAST_DAYS
 from data_manage.loader import load_stock_data
 from data_manage.ticker_list import ticker_manager
-from models.model_selector import select_best_model, train_and_evaluate_models
+from models.model_selector import train_and_evaluate_models, select_best_model
 from analytics.forecaster import make_forecast
 from analytics.visualizer import create_forecast_plot
 from analytics.strategy import generate_trading_signals, calculate_profit
@@ -61,7 +61,7 @@ async def get_tickers_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text(
                 f"📊 Тикеры на букву '{query}':\n\n{tickers_list}\n\n"
                 f"Всего найдено: {len(tickers)} тикеров\n"
-                f"Для анализа выберите тикер и используйте /start"
+                f"Для анализа напишите название тикера"
             )
         else:
             await update.message.reply_text(
@@ -76,7 +76,7 @@ async def get_tickers_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text(
                 f"🔍 Результаты поиска для '{query}':\n\n{tickers_list}\n\n"
                 f"Всего найдено: {len(tickers)} тикеров\n"
-                f"Для анализа выберите тикер и используйте /start"
+                f"Для анализа напишите название тикера"
             )
         else:
             await update.message.reply_text(

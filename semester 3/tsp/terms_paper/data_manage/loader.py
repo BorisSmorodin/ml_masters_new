@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 
+from config import START_DATE, END_DATE
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,8 +19,6 @@ def load_stock_data(ticker: str) -> pd.DataFrame:
         DataFrame с колонками ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
     """
     try:
-        from config import START_DATE, END_DATE
-
         logger.info(f"Загрузка данных для {ticker} с {START_DATE} по {END_DATE}")
 
         # Загружаем данные через yfinance
@@ -43,6 +43,13 @@ def load_stock_data(ticker: str) -> pd.DataFrame:
 
         # Удаляем строки с пропущенными значениями
         df = df.dropna(subset=['Close'])
+
+        # Удаляем часовой пояс из дат
+        if hasattr(df['Date'].dt, 'tz') and df['Date'].dt.tz is not None:
+            df['Date'] = df['Date'].dt.tz_localize(None)
+
+        # Преобразуем в datetime без часового пояса
+        df['Date'] = pd.to_datetime(df['Date']).dt.tz_localize(None)
 
         logger.info(f"Загружено {len(df)} строк для {ticker}")
 

@@ -1,46 +1,32 @@
 import pandas as pd
 import numpy as np
+from typing import Dict, Any
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 
 from models.base_model import BaseModel
-from data_manage.splitter import create_lag_features
+from data_manage.splitter import prepare_ml_data
 from config import LAG_WINDOW
 
 
 class MLModel(BaseModel):
-    """ML модель на основе Random Forest с лаговыми признаками."""
+    """Упрощенная ML модель на основе Random Forest."""
 
     def __init__(self):
         super().__init__("Random Forest")
         self.scaler = StandardScaler()
-        self.lag_window = LAG_WINDOW
-
-    def prepare_features(self, data: pd.Series, is_training: bool = True) -> tuple[pd.DataFrame, pd.Series]:
-        """Подготавливает признаки для обучения/прогноза."""
-        # Создаем лаговые признаки
-        df_features = create_lag_features(data, self.lag_window)
-
-        # Целевая переменная - текущее значение
-        y = df_features['Close']
-
-        # Признаки - лаги
-        X = df_features.drop('Close', axis=1)
-
-        if is_training:
-            X_scaled = self.scaler.fit_transform(X)
-        else:
-            X_scaled = self.scaler.transform(X)
-
-        return X_scaled, y
+        self.window = LAG_WINDOW
 
     def train(self, train_data: pd.DataFrame) -> None:
         """Обучает модель на исторических данных."""
         # Используем только цену закрытия
-        series = train_data['Close']
+        series = train_data['Close'].values
 
-        # Подготавливаем признаки
-        X, y = self.prepare_features(series, is_training=True)
+        # Подготавливаем данные в формате окон
+        X, y = prepare_ml_data(series, self.window)
+
+        # Масштабируем признаки
+        X_scaled = self.scaler.fit_transform(X)
 
         # Обучаем модель
         self.model = RandomForestRegressor(
@@ -49,24 +35,32 @@ class MLModel(BaseModel):
             random_state=42,
             n_jobs=-1
         )
-        self.model.fit(X, y)
+        self.model.fit(X_scaled, y)
         self.is_trained = True
+
+        # Сохраняем последние значения для прогноза
+        self.last_values = series[-self.window:].copy()
 
     def predict(self, test_data: pd.DataFrame) -> np.ndarray:
         """Прогнозирует на тестовых данных."""
         if not self.is_trained:
             raise ValueError("Модель не обучена!")
 
-        # Используем всю историю для создания лагов
-        full_series = pd.concat([self.last_train_data, test_data['Close']])
-
+        # Используем итеративный прогноз для тестовых данных
         predictions = []
-        for i in range(len(test_data)):
-            # Для каждого шага создаем лаги из последних данных
-            window = full_series.iloc[i:i + self.lag_window].values.reshape(1, -1)
-            window_scaled = self.scaler.transform(window)
-            pred = self.model.predict(window_scaled)
-            predictions.append(pred[0])
+        current_window = self.last_values.copy()
+
+        for _ in range(len(test_data)):
+            # Масштабируем текущее окно
+            window_scaled = self.scaler.transform(current_window.reshape(1, -1))
+
+            # Прогнозируем
+            pred = self.model.predict(window_scaled)[0]
+            predictions.append(pred)
+
+            # Обновляем окно: удаляем самый старый, добавляем прогноз
+            current_window = np.roll(current_window, -1)
+            current_window[-1] = pred
 
         return np.array(predictions)
 
@@ -75,11 +69,11 @@ class MLModel(BaseModel):
         if not self.is_trained:
             raise ValueError("Модель не обучена!")
 
-        # Сохраняем последние данные для создания лагов
-        last_values = data['Close'].values[-self.lag_window:]
+        # Получаем последние значения
+        series = data['Close'].values
+        current_window = series[-self.window:].copy()
 
         forecasts = []
-        current_window = last_values.copy()
 
         for _ in range(steps):
             # Масштабируем текущее окно
@@ -89,7 +83,7 @@ class MLModel(BaseModel):
             next_pred = self.model.predict(window_scaled)[0]
             forecasts.append(next_pred)
 
-            # Обновляем окно: удаляем самый старый, добавляем прогноз
+            # Обновляем окно для следующей итерации
             current_window = np.roll(current_window, -1)
             current_window[-1] = next_pred
 

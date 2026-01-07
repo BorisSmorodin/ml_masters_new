@@ -1,7 +1,8 @@
 import pandas as pd
-import numpy as np
 from typing import Any
-from config import FORECAST_DAYS
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def make_forecast(model: Any, data: pd.DataFrame, model_name: str, steps: int = 30) -> pd.Series:
@@ -17,7 +18,38 @@ def make_forecast(model: Any, data: pd.DataFrame, model_name: str, steps: int = 
     Returns:
         Прогноз на steps дней
     """
-    # Строим прогноз
-    forecast = model.forecast(data, steps)
+    try:
+        # Строим прогноз
+        forecast = model.forecast(data, steps)
 
-    return forecast
+        # Проверяем, что прогноз не содержит NaN
+        if forecast.isna().any():
+            logger.warning(f"Модель {model_name} вернула NaN в прогнозе. Заменяю на последнее значение.")
+            last_price = data['Close'].iloc[-1]
+            forecast = forecast.fillna(last_price)
+
+        # Проверяем, что прогноз не пустой
+        if len(forecast) == 0:
+            logger.warning(f"Модель {model_name} вернула пустой прогноз. Создаю постоянный прогноз.")
+            last_price = data['Close'].iloc[-1]
+            last_date = data['Date'].iloc[-1]
+            forecast_dates = pd.date_range(
+                start=last_date + pd.Timedelta(days=1),
+                periods=steps,
+                freq='B'
+            )
+            forecast = pd.Series([last_price] * steps, index=forecast_dates)
+
+        return forecast
+
+    except Exception as e:
+        logger.error(f"Ошибка при построении прогноза: {e}")
+        # Создаем простой прогноз на основе последнего значения
+        last_price = data['Close'].iloc[-1]
+        last_date = data['Date'].iloc[-1]
+        forecast_dates = pd.date_range(
+            start=last_date + pd.Timedelta(days=1),
+            periods=steps,
+            freq='B'
+        )
+        return pd.Series([last_price] * steps, index=forecast_dates)

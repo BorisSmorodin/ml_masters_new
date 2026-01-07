@@ -3,7 +3,7 @@ import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler
 
 from core import bot_handlers
-from core.bot_handlers import start, help_command, cancel, process_ticker, process_amount,TICKER, AMOUNT
+from core.bot_handlers import help_command, cancel, get_tickers_command
 from config import BOT_TOKEN
 
 # Настройка логирования
@@ -45,7 +45,7 @@ def main() -> None:
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel))
-    application.add_handler(CommandHandler("get_tickers", bot_handlers.get_tickers_command))
+    application.add_handler(CommandHandler("get_tickers", get_tickers_command))
 
     # Запускаем бота
     print("Бот запущен...")
