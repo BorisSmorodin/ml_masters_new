@@ -1,14 +1,13 @@
-import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, Any
 
 from telegram import Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
-import pandas as pd
 
 from core.states import TICKER, AMOUNT
 from data_manage.loader import load_stock_data
+from data_manage.ticker_list import ticker_manager
 from models.model_selector import select_best_model, train_and_evaluate_models
 from analytics.forecaster import make_forecast
 from analytics.visualizer import create_forecast_plot
@@ -39,6 +38,50 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
 
     return TICKER
+
+
+async def get_tickers_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обработчик команды /get_tickers."""
+    if not context.args:
+        await update.message.reply_text(
+            "Пожалуйста, укажите букву для поиска тикеров.\n"
+            "Например: /get_tickers A\n"
+            "Или: /get_tickers AAPL (для поиска по части тикера)"
+        )
+        return
+
+    query = context.args[0].upper()
+
+    # Если запрос - одна буква
+    if len(query) == 1 and query.isalpha():
+        tickers = ticker_manager.get_tickers_by_letter(query)
+        if tickers:
+            tickers_list = "\n".join([f"• {ticker}" for ticker in tickers])
+            await update.message.reply_text(
+                f"📊 Тикеры на букву '{query}':\n\n{tickers_list}\n\n"
+                f"Всего найдено: {len(tickers)} тикеров\n"
+                f"Для анализа выберите тикер и используйте /start"
+            )
+        else:
+            await update.message.reply_text(
+                f"Не найдено тикеров на букву '{query}'.\n"
+                f"Попробуйте другую букву."
+            )
+    else:
+        # Если запрос - часть тикера
+        tickers = ticker_manager.search_tickers(query)
+        if tickers:
+            tickers_list = "\n".join([f"• {ticker}" for ticker in tickers])
+            await update.message.reply_text(
+                f"🔍 Результаты поиска для '{query}':\n\n{tickers_list}\n\n"
+                f"Всего найдено: {len(tickers)} тикеров\n"
+                f"Для анализа выберите тикер и используйте /start"
+            )
+        else:
+            await update.message.reply_text(
+                f"Не найдено тикеров по запросу '{query}'.\n"
+                f"Попробуйте другой запрос."
+            )
 
 
 async def process_ticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

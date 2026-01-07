@@ -1,8 +1,8 @@
 import logging
 
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ConversationHandler
-from dotenv import load_dotenv, find_dotenv
 
+from core import bot_handlers
 from core.bot_handlers import start, help_command, cancel, process_ticker, process_amount,TICKER, AMOUNT
 from config import BOT_TOKEN
 
@@ -40,6 +40,7 @@ def main() -> None:
 
     # Регистрируем обработчики
     application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("get_tickers", bot_handlers.get_tickers_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel))
 
