@@ -5,3 +5,6 @@
 /semester 2/ml/homeworks/homework_5_data/Physical_Activity_Monitoring_unlabeled.csv
 **/.venv
 **/data/
+/semester 3/gen_ai/data_from_learn/input/
+/semester 3/gen_ai/generated_samples/
+/semester 3/gen_ai/real_samples/
