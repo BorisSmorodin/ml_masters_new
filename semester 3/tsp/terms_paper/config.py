@@ -18,7 +18,8 @@ TEMP_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOGS_DIR / "requests_log.csv"
 
 # Параметры данных
-HISTORY_YEARS = 2
+START_DATE = '2022-01-01'
+END_DATE = '2024-01-01'
 FORECAST_DAYS = 30
 TEST_SIZE = 0.2  # 20% данных для тестирования
 

@@ -1,4 +1,5 @@
 import logging
+import traceback
 from datetime import datetime
 from typing import Dict, Any
 
@@ -272,7 +273,7 @@ async def process_forecast_days(update: Update, context: ContextTypes.DEFAULT_TY
         return ConversationHandler.END
 
     except Exception as e:
-        logger.error(f"Ошибка при анализе: {e}")
+        logger.error(f"Ошибка при анализе: {e}. Traceback: {traceback.format_exc()}")
         await processing_msg.delete()
         await update.message.reply_text(
             f"Произошла ошибка при анализе: {str(e)[:200]}\n"

@@ -43,9 +43,9 @@ def main() -> None:
 
     # Регистрируем обработчики
     application.add_handler(conv_handler)
-    application.add_handler(CommandHandler("get_tickers", bot_handlers.get_tickers_command))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(CommandHandler("get_tickers", bot_handlers.get_tickers_command))
 
     # Запускаем бота
     print("Бот запущен...")

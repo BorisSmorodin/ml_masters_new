@@ -1,6 +1,5 @@
 import pandas as pd
 from datetime import datetime
-from pathlib import Path
 
 from config import LOG_FILE
 
@@ -10,6 +9,7 @@ def log_request(
         timestamp: datetime,
         ticker: str,
         amount: float,
+        forecast_days: int,
         best_model: str,
         metric_value: float,
         profit: float
@@ -22,6 +22,7 @@ def log_request(
         'timestamp': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
         'ticker': ticker,
         'amount': amount,
+        'forecast_days': forecast_days,
         'best_model': best_model,
         'metric_value': metric_value,
         'profit': profit
