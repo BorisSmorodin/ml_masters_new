@@ -5,7 +5,11 @@
 /semester 2/ml/homeworks/homework_5_data/Physical_Activity_Monitoring_unlabeled.csv
 **/.venv
 **/data/
+**/__pycache__/
+**/.idea
 /semester 3/gen_ai/data_from_learn/input/
 /semester 3/gen_ai/generated_samples/
 /semester 3/gen_ai/real_samples/
 /semester 3/tsp/terms_paper/.env
+/semester 3/tsp/terms_paper/.idea/
+/semester 3/tsp/terms_paper/tmp/
